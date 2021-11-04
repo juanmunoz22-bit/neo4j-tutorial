@@ -1,36 +1,37 @@
 #!/usr/bin/env python
 import os
-from json import dumps
 import logging
+from json import dumps
 
 from flask import Flask, g, Response, request
 from neo4j import GraphDatabase, basic_auth
 
-app = Flask(__name__, static_url_path='/static/')
+app = Flask(__name__, static_url_path = "/static/")
 
-url = os.getenv("NEO4J_URI", "neo4j+s://demo.neo4jlabs.com")
-username = os.getenv("NEO4J_USER", "movies")
-password = os.getenv("NEO4J_PASSWORD", "movies")
+# Try to load database connection info from environment
+url = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+username = os.getenv("NEO4J_USER", "neo4j2")
+password = os.getenv("NEO4J_PASSWORD", "neo4j2")
 neo4jVersion = os.getenv("NEO4J_VERSION", "4")
-database = os.getenv("NEO4J_DATABASE", "movies")
-
+database = os.getenv("NEO4J_DATABASE", "neo4j")
 port = os.getenv("PORT", 8080)
 
-driver = GraphDatabase.driver(url, auth=basic_auth(username, password))
+# Create a database driver instance
+driver = GraphDatabase.driver(url, auth = basic_auth(username, password))
 
-
+# Connect to database only once and store session in current context
 def get_db():
-    if not hasattr(g, 'neo4j_db'):
+    if not hasattr(g, "neo4j_db"):
         if neo4jVersion.startswith("4"):
-            g.neo4j_db = driver.session(database=database)
+            g.neo4j_db = driver.session(database = database)
         else:
             g.neo4j_db = driver.session()
     return g.neo4j_db
 
-
+# Close database connection when application context ends
 @app.teardown_appcontext
 def close_db(error):
-    if hasattr(g, 'neo4j_db'):
+    if hasattr(g, "neo4j_db"):
         g.neo4j_db.close()
 
 
