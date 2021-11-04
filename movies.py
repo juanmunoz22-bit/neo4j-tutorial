@@ -6,7 +6,7 @@ from json import dumps
 from flask import Flask, g, Response, request
 from neo4j import GraphDatabase, basic_auth
 
-app = Flask(__name__, static_url_path = "/static/")
+app = Flask(__name__, static_url_path="/static/")
 
 # Try to load database connection info from environment
 url = os.getenv("NEO4J_URI", "bolt://localhost:7687")
@@ -17,18 +17,22 @@ database = os.getenv("NEO4J_DATABASE", "neo4j")
 port = os.getenv("PORT", 8080)
 
 # Create a database driver instance
-driver = GraphDatabase.driver(url, auth = basic_auth(username, password))
+driver = GraphDatabase.driver(url, auth=basic_auth(username, password))
 
 # Connect to database only once and store session in current context
+
+
 def get_db():
     if not hasattr(g, "neo4j_db"):
         if neo4jVersion.startswith("4"):
-            g.neo4j_db = driver.session(database = database)
+            g.neo4j_db = driver.session(database=database)
         else:
             g.neo4j_db = driver.session()
     return g.neo4j_db
 
 # Close database connection when application context ends
+
+
 @app.teardown_appcontext
 def close_db(error):
     if hasattr(g, "neo4j_db"):
@@ -99,7 +103,8 @@ def get_search():
         db = get_db()
         results = db.read_transaction(lambda tx: list(tx.run("MATCH (movie:Movie) "
                                                              "WHERE movie.title =~ $title "
-                                                             "RETURN movie", {"title": "(?i).*" + q + ".*"}
+                                                             "RETURN movie", {
+                                                                 "title": "(?i).*" + q + ".*"}
                                                              )))
         return Response(dumps([serialize_movie(record['movie']) for record in results]),
                         mimetype="application/json")
@@ -125,8 +130,8 @@ def get_movie(title):
 def vote_in_movie(title):
     db = get_db()
     summary = db.write_transaction(lambda tx: tx.run("MATCH (m:Movie {title: $title}) "
-                                                    "WITH m, (CASE WHEN exists(m.votes) THEN m.votes ELSE 0 END) AS currentVotes "
-                                                    "SET m.votes = currentVotes + 1;", {"title": title}).consume())
+                                                     "WITH m, (CASE WHEN exists(m.votes) THEN m.votes ELSE 0 END) AS currentVotes "
+                                                     "SET m.votes = currentVotes + 1;", {"title": title}).consume())
     updates = summary.counters.properties_set
 
     db.close()
