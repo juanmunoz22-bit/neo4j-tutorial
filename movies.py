@@ -69,10 +69,9 @@ def serialize_cast(cast):
 def get_graph():
     db = get_db()
     results = db.read_transaction(lambda tx: list(tx.run("MATCH (m:Movie)<-[:ACTED_IN]-(a:Person) "
-                                                         "RETURN m.title as movie, collect(a.name) as cast "
-                                                         "LIMIT $limit", {
-                                                             "limit": request.args.get("limit",
-                                                                                       100)})))
+                                                        "RETURN m.title as movie, collect(a.name) as cast "
+                                                        "LIMIT $limit", {
+                                                            "limit": request.args.get("limit", 100)})))
     nodes = []
     rels = []
     i = 0
@@ -102,10 +101,10 @@ def get_search():
     else:
         db = get_db()
         results = db.read_transaction(lambda tx: list(tx.run("MATCH (movie:Movie) "
-                                                             "WHERE movie.title =~ $title "
-                                                             "RETURN movie", {
-                                                                 "title": "(?i).*" + q + ".*"}
-                                                             )))
+                                                            "WHERE movie.title =~ $title "
+                                                            "RETURN movie", {
+                                                                "title": "(?i).*" + q + ".*"}
+                                                            )))
         return Response(dumps([serialize_movie(record['movie']) for record in results]),
                         mimetype="application/json")
 
@@ -114,14 +113,14 @@ def get_search():
 def get_movie(title):
     db = get_db()
     result = db.read_transaction(lambda tx: tx.run("MATCH (movie:Movie {title:$title}) "
-                                                   "OPTIONAL MATCH (movie)<-[r]-(person:Person) "
-                                                   "RETURN movie.title as title,"
-                                                   "COLLECT([person.name, "
-                                                   "HEAD(SPLIT(TOLOWER(TYPE(r)), '_')), r.roles]) AS cast "
-                                                   "LIMIT 1", {"title": title}).single())
+                                                    "OPTIONAL MATCH (movie)<-[r]-(person:Person) "
+                                                    "RETURN movie.title as title,"
+                                                    "COLLECT([person.name, "
+                                                    "HEAD(SPLIT(TOLOWER(TYPE(r)), '_')), r.roles]) AS cast "
+                                                    "LIMIT 1", {"title": title}).single())
 
     return Response(dumps({"title": result['title'],
-                           "cast": [serialize_cast(member)
+                            "cast": [serialize_cast(member)
                                     for member in result['cast']]}),
                     mimetype="application/json")
 
@@ -130,8 +129,8 @@ def get_movie(title):
 def vote_in_movie(title):
     db = get_db()
     summary = db.write_transaction(lambda tx: tx.run("MATCH (m:Movie {title: $title}) "
-                                                     "WITH m, (CASE WHEN exists(m.votes) THEN m.votes ELSE 0 END) AS currentVotes "
-                                                     "SET m.votes = currentVotes + 1;", {"title": title}).consume())
+                                                    "WITH m, (CASE WHEN exists(m.votes) THEN m.votes ELSE 0 END) AS currentVotes "
+                                                    "SET m.votes = currentVotes + 1;", {"title": title}).consume())
     updates = summary.counters.properties_set
 
     db.close()
